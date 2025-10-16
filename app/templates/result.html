@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>評估結果 - OCR 評估平台</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📊 評估結果</h1>
+        <p class="info-text">檔案名稱：<b>{{ filename }}</b></p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>📏 評估指標</th>
+                    <th>📈 數值</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>字符錯誤率 (CER)</strong></td>
+                    <td><span class="metric-value">{{ "%.4f"|format(metrics.CER) }}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>詞錯誤率 (WER)</strong></td>
+                    <td><span class="metric-value">{{ "%.4f"|format(metrics.WER) }}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>綜合分數 (Score)</strong></td>
+                    <td><span class="metric-value">{{ "%.4f"|format(metrics.Score) }}</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <a href="/" class="link-button">🏠 返回首頁</a>
+        <a href="/leaderboard" class="link-button" style="margin-left: 10px;">📊 查看排行榜</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+jinja2
+python-Levenshtein
+jiwer
+python-multipart
+aiofiles
+ipdb
+distance
+apted
+lxml
+zss
+editdistance
+tqdm
+numpy

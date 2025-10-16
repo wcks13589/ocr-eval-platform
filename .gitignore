@@ -1,0 +1,6 @@
+# Uploaded files and generated data
+data/uploads/*
+!data/uploads/.gitkeep
+
+data/ground_truth.json
+data/leaderboard.json

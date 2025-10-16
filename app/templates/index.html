@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR 評估平台</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 OCR 評估平台</h1>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        {% if success_message %}
+            <div class="success">{{ success_message }}</div>
+        {% endif %}
+
+        <form action="/evaluate" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>👤 參賽者名稱</label>
+                <input type="text" name="name" required placeholder="請輸入你的名稱">
+            </div>
+            
+            <div class="form-group">
+                <label>📄 上傳結果檔案</label>
+                <input type="file" name="file" accept=".json" required>
+            </div>
+            
+            <button type="submit">🚀 開始評估</button>
+        </form>
+
+        <div id="leaderboard-section" style="margin-top: 50px; border-top: 2px solid #e2e8f0; padding-top: 40px;">
+            <h2 style="color: #667eea; font-size: 2em; margin-bottom: 25px;">🏆 即時排行榜</h2>
+
+            {% if leaders %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>🏅 名次</th>
+                        <th>👤 名稱</th>
+                        <th>📊 TEDS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in leaders %}
+                    <tr {% if highlight_name and user.name == highlight_name %}class="highlight-row"{% endif %}>
+                        <td>
+                            {% if loop.index == 1 %}
+                                <span class="badge badge-gold">🥇 1</span>
+                            {% elif loop.index == 2 %}
+                                <span class="badge badge-silver">🥈 2</span>
+                            {% elif loop.index == 3 %}
+                                <span class="badge badge-bronze">🥉 3</span>
+                            {% else %}
+                                {{ loop.index }}
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ user.name }}</strong></td>
+                        <td><span class="metric-value">{{ "%.4f"|format(user.teds) }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p class="info-text">目前還沒有任何紀錄，成為第一位挑戰者吧！🚀</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if highlight_name %}
+    <script>
+        // 當有新上傳的記錄時，平滑滾動到排行榜區域
+        document.addEventListener('DOMContentLoaded', function() {
+            const leaderboard = document.getElementById('leaderboard-section');
+            if (leaderboard) {
+                setTimeout(function() {
+                    leaderboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            }
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

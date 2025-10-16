@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排行榜 - OCR 評估平台</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 排行榜</h1>
+
+        {% if leaders %}
+        <table>
+            <thead>
+                <tr>
+                    <th>🏅 名次</th>
+                    <th>👤 名稱</th>
+                    <th>📊 TEDS</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in leaders %}
+                <tr>
+                    <td>
+                        {% if loop.index == 1 %}
+                            <span class="badge badge-gold">🥇 1</span>
+                        {% elif loop.index == 2 %}
+                            <span class="badge badge-silver">🥈 2</span>
+                        {% elif loop.index == 3 %}
+                            <span class="badge badge-bronze">🥉 3</span>
+                        {% else %}
+                            {{ loop.index }}
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ user.name }}</strong></td>
+                    <td><span class="metric-value">{{ "%.4f"|format(user.teds) }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p class="info-text">目前還沒有任何紀錄，成為第一位挑戰者吧！</p>
+        {% endif %}
+
+        <a href="/" class="link-button">🏠 返回首頁</a>
+    </div>
+</body>
+</html>
