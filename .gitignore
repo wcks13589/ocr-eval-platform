@@ -3,4 +3,5 @@ data/uploads/*
 !data/uploads/.gitkeep
 
 data/ground_truth.json
+data/ground_truth.example.json
 data/leaderboard.json
