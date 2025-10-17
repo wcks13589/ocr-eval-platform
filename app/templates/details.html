@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>詳細分數 - {{ detail_data.name }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container" style="max-width: 1200px;">
+        <div class="detail-header">
+            <h1>📊 詳細評估結果</h1>
+            <div class="detail-summary">
+                <div class="summary-card">
+                    <span class="summary-label">👤 參賽者</span>
+                    <span class="summary-value">{{ detail_data.name }}</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-label">📈 平均 TEDS</span>
+                    <span class="summary-value highlight-score">{{ "%.4f"|format(detail_data.teds) }}</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-label">✅ 有效資料</span>
+                    <span class="summary-value">{{ detail_data.valid_count }} / {{ detail_data.total_count }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-actions">
+            <a href="/" class="action-btn btn-back">⬅️ 返回首頁</a>
+            <button onclick="downloadCSV()" class="action-btn btn-download">📥 下載 CSV</button>
+            <button onclick="toggleFilter()" class="action-btn btn-filter" id="filterBtn">🔍 顯示篩選</button>
+        </div>
+
+        <!-- 篩選選項 -->
+        <div id="filterOptions" style="display: none;" class="filter-panel">
+            <div class="filter-group">
+                <label>
+                    <input type="checkbox" id="filterValid" checked onchange="applyFilter()"> 
+                    顯示正常資料
+                </label>
+                <label>
+                    <input type="checkbox" id="filterMissing" checked onchange="applyFilter()"> 
+                    顯示缺失資料
+                </label>
+                <label>
+                    <input type="checkbox" id="filterError" checked onchange="applyFilter()"> 
+                    顯示錯誤資料
+                </label>
+            </div>
+            <div class="filter-group">
+                <label>最低分數：</label>
+                <input type="number" id="minScore" min="0" max="1" step="0.01" value="0" onchange="applyFilter()">
+                <label>最高分數：</label>
+                <input type="number" id="maxScore" min="0" max="1" step="0.01" value="1" onchange="applyFilter()">
+            </div>
+        </div>
+
+        <!-- 統計資訊 -->
+        <div class="stats-panel">
+            <h3>📈 分數統計</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">完美分數 (1.0)</span>
+                    <span class="stat-value" id="statPerfect">-</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">高分 (≥0.8)</span>
+                    <span class="stat-value" id="statHigh">-</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">中分 (0.5-0.8)</span>
+                    <span class="stat-value" id="statMedium">-</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">低分 (<0.5)</span>
+                    <span class="stat-value" id="statLow">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 詳細分數表格 -->
+        <div class="detail-table-wrapper">
+            <table id="detailTable">
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">序號</th>
+                        <th style="width: 30%;">表格 ID</th>
+                        <th style="width: 20%;">TEDS 分數</th>
+                        <th style="width: 20%;">狀態</th>
+                        <th style="width: 20%;">評級</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in detail_data.details %}
+                    <tr class="detail-row" 
+                        data-status="{{ item.status }}" 
+                        data-score="{{ item.score }}">
+                        <td>{{ loop.index }}</td>
+                        <td class="data-id">{{ item.id }}</td>
+                        <td>
+                            <span class="score-badge score-{{ 'perfect' if item.score == 1.0 else ('high' if item.score >= 0.8 else ('medium' if item.score >= 0.5 else 'low')) }}">
+                                {{ "%.4f"|format(item.score) }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.status == 'valid' %}
+                                <span class="status-badge status-valid">✅ 正常</span>
+                            {% elif item.status == 'missing' %}
+                                <span class="status-badge status-missing">❌ 缺失</span>
+                            {% else %}
+                                <span class="status-badge status-error">⚠️ 錯誤</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.score == 1.0 %}
+                                <span class="grade-badge grade-perfect">🌟 完美</span>
+                            {% elif item.score >= 0.8 %}
+                                <span class="grade-badge grade-high">😊 優秀</span>
+                            {% elif item.score >= 0.5 %}
+                                <span class="grade-badge grade-medium">😐 普通</span>
+                            {% else %}
+                                <span class="grade-badge grade-low">😞 待改進</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const detailData = {{ detail_data | tojson }};
+
+        // 計算統計資訊
+        function calculateStats() {
+            const validDetails = detailData.details.filter(item => item.status === 'valid');
+            const perfect = validDetails.filter(item => item.score === 1.0).length;
+            const high = validDetails.filter(item => item.score >= 0.8 && item.score < 1.0).length;
+            const medium = validDetails.filter(item => item.score >= 0.5 && item.score < 0.8).length;
+            const low = validDetails.filter(item => item.score < 0.5).length;
+
+            document.getElementById('statPerfect').textContent = perfect;
+            document.getElementById('statHigh').textContent = high;
+            document.getElementById('statMedium').textContent = medium;
+            document.getElementById('statLow').textContent = low;
+        }
+
+        // 篩選功能
+        function toggleFilter() {
+            const filterOptions = document.getElementById('filterOptions');
+            const filterBtn = document.getElementById('filterBtn');
+            if (filterOptions.style.display === 'none') {
+                filterOptions.style.display = 'block';
+                filterBtn.textContent = '🔍 隱藏篩選';
+            } else {
+                filterOptions.style.display = 'none';
+                filterBtn.textContent = '🔍 顯示篩選';
+            }
+        }
+
+        function applyFilter() {
+            const showValid = document.getElementById('filterValid').checked;
+            const showMissing = document.getElementById('filterMissing').checked;
+            const showError = document.getElementById('filterError').checked;
+            const minScore = parseFloat(document.getElementById('minScore').value);
+            const maxScore = parseFloat(document.getElementById('maxScore').value);
+
+            const rows = document.querySelectorAll('.detail-row');
+            rows.forEach(row => {
+                const status = row.dataset.status;
+                const score = parseFloat(row.dataset.score);
+
+                let show = true;
+
+                // 狀態篩選
+                if (status === 'valid' && !showValid) show = false;
+                if (status === 'missing' && !showMissing) show = false;
+                if (status.startsWith('error') && !showError) show = false;
+
+                // 分數範圍篩選
+                if (score < minScore || score > maxScore) show = false;
+
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        // 下載 CSV
+        function downloadCSV() {
+            let csv = '序號,資料ID,TEDS分數,狀態\n';
+            detailData.details.forEach((item, index) => {
+                csv += `${index + 1},"${item.id}",${item.score},"${item.status}"\n`;
+            });
+
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${detailData.name}_詳細分數.csv`;
+            link.click();
+        }
+
+        // 頁面載入時計算統計
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateStats();
+        });
+    </script>
+</body>
+</html>
+

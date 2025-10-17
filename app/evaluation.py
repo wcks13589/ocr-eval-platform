@@ -58,11 +58,20 @@ def latex_to_html_table(latex_str):
 def evaluate(pred_path, progress_callback=None):
     """
     使用 TEDS 計算 Ground Truth 與預測結果的平均相似度。
-    只回傳整體平均分數。
+    回傳整體平均分數和每筆資料的詳細分數。
     
     Args:
         pred_path: 預測結果檔案路徑
         progress_callback: 進度回調函數，接收 (current, total, key) 參數
+    
+    Returns:
+        dict: {
+            "TEDS": float,  # 平均分數
+            "details": [    # 每筆資料的詳細分數
+                {"id": str, "score": float, "status": str},
+                ...
+            ]
+        }
     """
     ground_truth = load_ground_truth()
 
@@ -78,6 +87,9 @@ def evaluate(pred_path, progress_callback=None):
     total_score = 0.0
     valid_count = 0
     
+    # 儲存每筆資料的詳細分數
+    details = []
+    
     # 計算總數
     total_items = len(ground_truth)
     current_item = 0
@@ -90,15 +102,42 @@ def evaluate(pred_path, progress_callback=None):
             progress_callback(current_item, total_items, key)
         
         pred_text = predictions.get(key, "")
+        
+        # 處理缺失或空白的資料
         if not gt_text or not pred_text:
+            details.append({
+                "id": key,
+                "score": 0.0,
+                "status": "missing" if not pred_text else "invalid"
+            })
             continue
 
-        gt_html = normalize_to_html(gt_text)
-        pred_html = normalize_to_html(pred_text)
-
-        score = teds.evaluate(pred_html, gt_html)
-        total_score += score
-        valid_count += 1
+        try:
+            gt_html = normalize_to_html(gt_text)
+            pred_html = normalize_to_html(pred_text)
+            score = teds.evaluate(pred_html, gt_html)
+            
+            details.append({
+                "id": key,
+                "score": round(score, 4),
+                "status": "valid"
+            })
+            
+            total_score += score
+            valid_count += 1
+        except Exception as e:
+            # 處理單筆資料評估錯誤
+            details.append({
+                "id": key,
+                "score": 0.0,
+                "status": f"error: {str(e)[:50]}"
+            })
 
     avg_score = total_score / valid_count if valid_count > 0 else 0.0
-    return {"TEDS": round(avg_score, 4)}
+    
+    return {
+        "TEDS": round(avg_score, 4),
+        "details": details,
+        "valid_count": valid_count,
+        "total_count": total_items
+    }

@@ -17,6 +17,7 @@
                     <th>🏅 名次</th>
                     <th>👤 名稱</th>
                     <th>📊 TEDS</th>
+                    <th>🔍 詳細資訊</th>
                 </tr>
             </thead>
             <tbody>
@@ -35,6 +36,11 @@
                     </td>
                     <td><strong>{{ user.name }}</strong></td>
                     <td><span class="metric-value">{{ "%.4f"|format(user.teds) }}</span></td>
+                    <td>
+                        <a href="/details/{{ user.name }}" class="detail-btn" title="查看詳細分數">
+                            📋 詳細
+                        </a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

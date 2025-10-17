@@ -2,6 +2,9 @@
 data/uploads/*
 !data/uploads/.gitkeep
 
+data/details/*
+!data/details/.gitkeep
+
 data/ground_truth.json
 data/ground_truth.example.json
 data/leaderboard.json

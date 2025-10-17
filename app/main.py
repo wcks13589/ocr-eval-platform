@@ -14,8 +14,10 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 UPLOAD_DIR = "data/uploads"
 LEADERBOARD_PATH = "data/leaderboard.json"
+DETAILS_DIR = "data/details"  # 儲存每個參賽者的詳細分數
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(DETAILS_DIR, exist_ok=True)
 
 # 用於異步執行評估任務的執行器
 executor = ThreadPoolExecutor(max_workers=4)
@@ -94,6 +96,17 @@ async def evaluate_file(
     # 計算評分（加入錯誤處理）
     try:
         result = evaluate(save_path)
+        
+        # 儲存詳細分數
+        detail_path = os.path.join(DETAILS_DIR, f"{name}.json")
+        with open(detail_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "name": name,
+                "teds": result["TEDS"],
+                "details": result["details"],
+                "valid_count": result["valid_count"],
+                "total_count": result["total_count"]
+            }, f, ensure_ascii=False, indent=2)
     except ValueError as e:
         # 格式錯誤：刪除已上傳的檔案，顯示錯誤訊息
         if os.path.exists(save_path):
@@ -155,6 +168,41 @@ async def leaderboard(request: Request):
     })
 
 
+@app.get("/details/{name}", response_class=HTMLResponse)
+async def get_details(request: Request, name: str):
+    """顯示某個參賽者的詳細分數"""
+    detail_path = os.path.join(DETAILS_DIR, f"{name}.json")
+    
+    if not os.path.exists(detail_path):
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "error": f"找不到「{name}」的詳細資料",
+            "leaders": []
+        })
+    
+    with open(detail_path, "r", encoding="utf-8") as f:
+        detail_data = json.load(f)
+    
+    return templates.TemplateResponse("details.html", {
+        "request": request,
+        "detail_data": detail_data
+    })
+
+
+@app.get("/api/details/{name}")
+async def api_get_details(name: str):
+    """API: 獲取某個參賽者的詳細分數（JSON 格式）"""
+    detail_path = os.path.join(DETAILS_DIR, f"{name}.json")
+    
+    if not os.path.exists(detail_path):
+        return {"success": False, "error": f"找不到「{name}」的詳細資料"}
+    
+    with open(detail_path, "r", encoding="utf-8") as f:
+        detail_data = json.load(f)
+    
+    return {"success": True, "data": detail_data}
+
+
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     """WebSocket 端點用於推送評估進度"""
@@ -202,6 +250,17 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         try:
             # 執行評估
             result = await loop.run_in_executor(executor, eval_with_progress)
+            
+            # 儲存詳細分數
+            detail_path = os.path.join(DETAILS_DIR, f"{name}.json")
+            with open(detail_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "name": name,
+                    "teds": result["TEDS"],
+                    "details": result["details"],
+                    "valid_count": result["valid_count"],
+                    "total_count": result["total_count"]
+                }, f, ensure_ascii=False, indent=2)
             
             # 更新排行榜
             with open(LEADERBOARD_PATH, "r+", encoding="utf-8") as f:
