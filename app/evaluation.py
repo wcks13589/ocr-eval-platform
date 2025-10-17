@@ -55,10 +55,14 @@ def latex_to_html_table(latex_str):
     html_table += "</table></body></html>"
     return html_table
 
-def evaluate(pred_path):
+def evaluate(pred_path, progress_callback=None):
     """
     使用 TEDS 計算 Ground Truth 與預測結果的平均相似度。
     只回傳整體平均分數。
+    
+    Args:
+        pred_path: 預測結果檔案路徑
+        progress_callback: 進度回調函數，接收 (current, total, key) 參數
     """
     ground_truth = load_ground_truth()
 
@@ -73,8 +77,18 @@ def evaluate(pred_path):
     teds = TEDS(n_jobs=4)
     total_score = 0.0
     valid_count = 0
+    
+    # 計算總數
+    total_items = len(ground_truth)
+    current_item = 0
 
     for key, gt_text in ground_truth.items():
+        current_item += 1
+        
+        # 回報進度
+        if progress_callback:
+            progress_callback(current_item, total_items, key)
+        
         pred_text = predictions.get(key, "")
         if not gt_text or not pred_text:
             continue

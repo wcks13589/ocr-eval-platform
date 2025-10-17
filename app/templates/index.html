@@ -18,19 +18,34 @@
             <div class="success">{{ success_message }}</div>
         {% endif %}
 
-        <form action="/evaluate" method="post" enctype="multipart/form-data">
+        <form id="uploadForm" action="/evaluate" method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label>👤 參賽者名稱</label>
-                <input type="text" name="name" required placeholder="請輸入你的名稱">
+                <input type="text" id="nameInput" name="name" required placeholder="請輸入你的名稱">
             </div>
             
             <div class="form-group">
                 <label>📄 上傳結果檔案</label>
-                <input type="file" name="file" accept=".json" required>
+                <input type="file" id="fileInput" name="file" accept=".json" required>
             </div>
             
-            <button type="submit">🚀 開始評估</button>
+            <button type="submit" id="submitBtn">🚀 開始評估</button>
         </form>
+
+        <!-- 進度條區域 -->
+        <div id="progressContainer" style="display: none;">
+            <div class="progress-wrapper">
+                <h3 id="progressTitle">⏳ 正在處理您的檔案...</h3>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar">
+                        <span class="progress-text" id="progressText">0%</span>
+                    </div>
+                </div>
+                <div class="progress-info">
+                    <span id="progressDetail">準備開始...</span>
+                </div>
+            </div>
+        </div>
 
         <div id="leaderboard-section" style="margin-top: 50px; border-top: 2px solid #e2e8f0; padding-top: 40px;">
             <h2 style="color: #667eea; font-size: 2em; margin-bottom: 25px;">🏆 即時排行榜</h2>
@@ -70,8 +85,145 @@
         </div>
     </div>
 
-    {% if highlight_name %}
     <script>
+        // WebSocket 進度條邏輯
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const nameInput = document.getElementById('nameInput');
+            const fileInput = document.getElementById('fileInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const progressDetail = document.getElementById('progressDetail');
+            const progressTitle = document.getElementById('progressTitle');
+            
+            const name = nameInput.value.trim();
+            const file = fileInput.files[0];
+            
+            if (!name || !file) {
+                alert('請填寫所有欄位');
+                return;
+            }
+            
+            // 檢查是否已存在
+            const existingNames = [{% for user in leaders %}'{{ user.name }}',{% endfor %}];
+            if (existingNames.includes(name)) {
+                alert(`名稱「${name}」已存在排行榜，請換一個名稱。`);
+                return;
+            }
+            
+            // 上傳檔案到伺服器
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('name', name);
+            
+            try {
+                // 先上傳檔案
+                submitBtn.disabled = true;
+                submitBtn.textContent = '📤 上傳中...';
+                
+                const uploadResponse = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const uploadResult = await uploadResponse.json();
+                
+                if (!uploadResult.success) {
+                    throw new Error(uploadResult.error || '檔案上傳失敗');
+                }
+                
+                // 顯示進度條
+                progressContainer.style.display = 'block';
+                submitBtn.textContent = '⏳ 評估中...';
+                
+                // 建立 WebSocket 連接
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const sessionId = Date.now();
+                const ws = new WebSocket(`${protocol}//${window.location.host}/ws/${sessionId}`);
+                
+                ws.onopen = function() {
+                    // 發送評估請求
+                    ws.send(JSON.stringify({
+                        name: name,
+                        file_path: `data/uploads/${name}.json`
+                    }));
+                };
+                
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'progress') {
+                        // 更新進度條
+                        progressBar.style.width = data.percentage + '%';
+                        progressText.textContent = data.percentage + '%';
+                        progressDetail.textContent = `正在評估第 ${data.current} / ${data.total} 筆資料 (ID: ${data.current_key})`;
+                    } else if (data.type === 'complete') {
+                        // 評估完成
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '100%';
+                        progressTitle.textContent = '✅ 評估完成！';
+                        progressDetail.textContent = `${name} 的 TEDS 分數為 ${data.result.TEDS}`;
+                        
+                        // 1.5秒後重新載入頁面以顯示更新後的排行榜
+                        setTimeout(function() {
+                            window.location.href = `/?success=${encodeURIComponent(name)}&score=${data.result.TEDS}`;
+                        }, 1500);
+                    } else if (data.type === 'error') {
+                        // 錯誤處理
+                        progressContainer.style.display = 'none';
+                        alert(data.message);
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '🚀 開始評估';
+                    }
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket 錯誤:', error);
+                    progressContainer.style.display = 'none';
+                    alert('連接錯誤，請重試');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🚀 開始評估';
+                };
+                
+                ws.onclose = function() {
+                    console.log('WebSocket 連接已關閉');
+                };
+                
+            } catch (error) {
+                console.error('錯誤:', error);
+                alert('發生錯誤：' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 開始評估';
+                progressContainer.style.display = 'none';
+            }
+        });
+
+        // 處理成功參數
+        const urlParams = new URLSearchParams(window.location.search);
+        const successName = urlParams.get('success');
+        const successScore = urlParams.get('score');
+        
+        if (successName && successScore) {
+            // 顯示成功訊息
+            const container = document.querySelector('.container');
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.textContent = `✅ 評估完成！${successName} 的 TEDS 分數為 ${successScore}`;
+            container.insertBefore(successDiv, container.firstChild.nextSibling);
+            
+            // 滾動到排行榜
+            setTimeout(function() {
+                const leaderboard = document.getElementById('leaderboard-section');
+                if (leaderboard) {
+                    leaderboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 300);
+        }
+
+        {% if highlight_name %}
         // 當有新上傳的記錄時，平滑滾動到排行榜區域
         document.addEventListener('DOMContentLoaded', function() {
             const leaderboard = document.getElementById('leaderboard-section');
@@ -81,7 +233,7 @@
                 }, 300);
             }
         });
+        {% endif %}
     </script>
-    {% endif %}
 </body>
 </html>

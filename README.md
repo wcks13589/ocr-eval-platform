@@ -38,7 +38,7 @@ This platform allows users to:
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/wcks13589/ocr-eval-platform.git
 cd ocr-eval-platform
 ```
 
@@ -83,13 +83,13 @@ For easier management, use Docker Compose:
 
 ```bash
 # Start the service
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop the service
-docker-compose down
+docker compose down
 ```
 
 The `docker-compose.yml` automatically handles volume mounting and configuration.
