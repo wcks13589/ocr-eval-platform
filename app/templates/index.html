@@ -1,16 +1,54 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OCR 評估平台</title>
+    <title>{{ t.app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .lang-switcher {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .lang-btn {
+            padding: 6px 12px;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: #4a5568;
+        }
+        .lang-btn:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+        .lang-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h1>🧠 OCR 評估平台</h1>
-            <a href="/admin/login" style="color: #667eea; text-decoration: none; font-size: 0.9em;">🔐 管理員</a>
+            <h1>{{ t.index_title }}</h1>
+            <div class="header-actions">
+                <div class="lang-switcher">
+                    <a href="/set_language/zh-TW" class="lang-btn {% if lang == 'zh-TW' %}active{% endif %}">中文</a>
+                    <a href="/set_language/en" class="lang-btn {% if lang == 'en' %}active{% endif %}">English</a>
+                </div>
+                <a href="/admin/login" style="color: #667eea; text-decoration: none; font-size: 0.9em;">{{ t.admin_link }}</a>
+            </div>
         </div>
 
         {% if error %}
@@ -23,44 +61,44 @@
 
         <form id="uploadForm" action="/evaluate" method="post" enctype="multipart/form-data">
             <div class="form-group">
-                <label>👤 參賽者名稱</label>
-                <input type="text" id="nameInput" name="name" required placeholder="請輸入你的名稱">
+                <label>{{ t.participant_name }}</label>
+                <input type="text" id="nameInput" name="name" required placeholder="{{ t.participant_name_placeholder }}">
             </div>
             
             <div class="form-group">
-                <label>📄 上傳結果檔案</label>
+                <label>{{ t.upload_file }}</label>
                 <input type="file" id="fileInput" name="file" accept=".json" required>
             </div>
             
-            <button type="submit" id="submitBtn">🚀 開始評估</button>
+            <button type="submit" id="submitBtn">{{ t.start_evaluation }}</button>
         </form>
 
         <!-- 進度條區域 -->
         <div id="progressContainer" style="display: none;">
             <div class="progress-wrapper">
-                <h3 id="progressTitle">⏳ 正在處理您的檔案...</h3>
+                <h3 id="progressTitle">{{ t.processing_file }}</h3>
                 <div class="progress-bar-container">
                     <div class="progress-bar" id="progressBar">
                         <span class="progress-text" id="progressText">0%</span>
                     </div>
                 </div>
                 <div class="progress-info">
-                    <span id="progressDetail">準備開始...</span>
+                    <span id="progressDetail">{{ t.preparing }}</span>
                 </div>
             </div>
         </div>
 
         <div id="leaderboard-section" style="margin-top: 50px; border-top: 2px solid #e2e8f0; padding-top: 40px;">
-            <h2 style="color: #667eea; font-size: 2em; margin-bottom: 25px;">🏆 即時排行榜</h2>
+            <h2 style="color: #667eea; font-size: 2em; margin-bottom: 25px;">{{ t.leaderboard_title }}</h2>
 
             {% if leaders %}
             <table>
                 <thead>
                     <tr>
-                        <th>🏅 名次</th>
-                        <th>👤 名稱</th>
-                        <th>📊 TEDS</th>
-                        <th>🔍 詳細資訊</th>
+                        <th>{{ t.rank }}</th>
+                        <th>{{ t.name }}</th>
+                        <th>{{ t.teds_score }}</th>
+                        <th>{{ t.details }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,8 +118,8 @@
                         <td><strong>{{ user.name }}</strong></td>
                         <td><span class="metric-value">{{ "%.4f"|format(user.teds) }}</span></td>
                         <td>
-                            <a href="/details/{{ user.name }}" class="detail-btn" title="查看詳細分數">
-                                📋 詳細
+                            <a href="/details/{{ user.name }}" class="detail-btn" title="{{ t.view_details }}">
+                                {{ t.view_details }}
                             </a>
                         </td>
                     </tr>
@@ -89,12 +127,22 @@
                 </tbody>
             </table>
             {% else %}
-                <p class="info-text">目前還沒有任何紀錄，成為第一位挑戰者吧！🚀</p>
+                <p class="info-text">{{ t.no_records }}</p>
             {% endif %}
         </div>
     </div>
 
     <script>
+        const translations = {
+            uploading: "{{ t.uploading }}",
+            evaluating: "{{ t.evaluating }}",
+            evaluationComplete: "{{ t.evaluation_complete }}",
+            nameExists: "{{ t.name_exists }}",
+            fillAllFields: "{{ t.fill_all_fields }}",
+            connectionError: "{{ t.connection_error }}",
+            startEvaluation: "{{ t.start_evaluation }}"
+        };
+
         // WebSocket 進度條邏輯
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -112,14 +160,14 @@
             const file = fileInput.files[0];
             
             if (!name || !file) {
-                alert('請填寫所有欄位');
+                alert(translations.fillAllFields);
                 return;
             }
             
             // 檢查是否已存在
             const existingNames = [{% for user in leaders %}'{{ user.name }}',{% endfor %}];
             if (existingNames.includes(name)) {
-                alert(`名稱「${name}」已存在排行榜，請換一個名稱。`);
+                alert(translations.nameExists.replace('{name}', name));
                 return;
             }
             
@@ -131,7 +179,7 @@
             try {
                 // 先上傳檔案
                 submitBtn.disabled = true;
-                submitBtn.textContent = '📤 上傳中...';
+                submitBtn.textContent = translations.uploading;
                 
                 const uploadResponse = await fetch('/upload', {
                     method: 'POST',
@@ -141,12 +189,12 @@
                 const uploadResult = await uploadResponse.json();
                 
                 if (!uploadResult.success) {
-                    throw new Error(uploadResult.error || '檔案上傳失敗');
+                    throw new Error(uploadResult.error || '{{ t.file_upload_failed }}');
                 }
                 
                 // 顯示進度條
                 progressContainer.style.display = 'block';
-                submitBtn.textContent = '⏳ 評估中...';
+                submitBtn.textContent = translations.evaluating;
                 
                 // 建立 WebSocket 連接
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -168,13 +216,21 @@
                         // 更新進度條
                         progressBar.style.width = data.percentage + '%';
                         progressText.textContent = data.percentage + '%';
+                        {% if lang == 'en' %}
+                        progressDetail.textContent = `Evaluating ${data.current} / ${data.total} items (Table: ${data.current_key})`;
+                        {% else %}
                         progressDetail.textContent = `正在評估第 ${data.current} / ${data.total} 筆資料 (Table: ${data.current_key})`;
+                        {% endif %}
                     } else if (data.type === 'complete') {
                         // 評估完成
                         progressBar.style.width = '100%';
                         progressText.textContent = '100%';
-                        progressTitle.textContent = '✅ 評估完成！';
+                        progressTitle.textContent = translations.evaluationComplete;
+                        {% if lang == 'en' %}
+                        progressDetail.textContent = `TEDS score for ${name} is ${data.result.TEDS}`;
+                        {% else %}
                         progressDetail.textContent = `${name} 的 TEDS 分數為 ${data.result.TEDS}`;
+                        {% endif %}
                         
                         // 1.5秒後重新載入頁面以顯示更新後的排行榜
                         setTimeout(function() {
@@ -185,27 +241,27 @@
                         progressContainer.style.display = 'none';
                         alert(data.message);
                         submitBtn.disabled = false;
-                        submitBtn.textContent = '🚀 開始評估';
+                        submitBtn.textContent = translations.startEvaluation;
                     }
                 };
                 
                 ws.onerror = function(error) {
-                    console.error('WebSocket 錯誤:', error);
+                    console.error('WebSocket error:', error);
                     progressContainer.style.display = 'none';
-                    alert('連接錯誤，請重試');
+                    alert(translations.connectionError);
                     submitBtn.disabled = false;
-                    submitBtn.textContent = '🚀 開始評估';
+                    submitBtn.textContent = translations.startEvaluation;
                 };
                 
                 ws.onclose = function() {
-                    console.log('WebSocket 連接已關閉');
+                    console.log('WebSocket connection closed');
                 };
                 
             } catch (error) {
-                console.error('錯誤:', error);
-                alert('發生錯誤：' + error.message);
+                console.error('Error:', error);
+                alert('{{ t.error_occurred }}'.replace('{error}', error.message));
                 submitBtn.disabled = false;
-                submitBtn.textContent = '🚀 開始評估';
+                submitBtn.textContent = translations.startEvaluation;
                 progressContainer.style.display = 'none';
             }
         });
@@ -220,7 +276,11 @@
             const container = document.querySelector('.container');
             const successDiv = document.createElement('div');
             successDiv.className = 'success';
+            {% if lang == 'en' %}
+            successDiv.textContent = `✅ Evaluation complete! TEDS score for ${successName} is ${successScore}`;
+            {% else %}
             successDiv.textContent = `✅ 評估完成！${successName} 的 TEDS 分數為 ${successScore}`;
+            {% endif %}
             container.insertBefore(successDiv, container.firstChild.nextSibling);
             
             // 滾動到排行榜

@@ -1,23 +1,56 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>排行榜 - OCR 評估平台</title>
+    <title>{{ t.leaderboard_page_title }} - {{ t.app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .lang-switcher {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .lang-btn {
+            padding: 6px 12px;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: #4a5568;
+        }
+        .lang-btn:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+        .lang-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏆 排行榜</h1>
+        <div class="lang-switcher">
+            <a href="/set_language/zh-TW" class="lang-btn {% if lang == 'zh-TW' %}active{% endif %}">中文</a>
+            <a href="/set_language/en" class="lang-btn {% if lang == 'en' %}active{% endif %}">English</a>
+        </div>
+
+        <h1>{{ t.leaderboard_page_title }}</h1>
 
         {% if leaders %}
         <table>
             <thead>
                 <tr>
-                    <th>🏅 名次</th>
-                    <th>👤 名稱</th>
-                    <th>📊 TEDS</th>
-                    <th>🔍 詳細資訊</th>
+                    <th>{{ t.rank }}</th>
+                    <th>{{ t.name }}</th>
+                    <th>{{ t.teds_score }}</th>
+                    <th>{{ t.details }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -37,8 +70,8 @@
                     <td><strong>{{ user.name }}</strong></td>
                     <td><span class="metric-value">{{ "%.4f"|format(user.teds) }}</span></td>
                     <td>
-                        <a href="/details/{{ user.name }}" class="detail-btn" title="查看詳細分數">
-                            📋 詳細
+                        <a href="/details/{{ user.name }}" class="detail-btn" title="{{ t.view_details }}">
+                            {{ t.view_details }}
                         </a>
                     </td>
                 </tr>
@@ -46,10 +79,10 @@
             </tbody>
         </table>
         {% else %}
-            <p class="info-text">目前還沒有任何紀錄，成為第一位挑戰者吧！</p>
+            <p class="info-text">{{ t.no_records }}</p>
         {% endif %}
 
-        <a href="/" class="link-button">🏠 返回首頁</a>
+        <a href="/" class="link-button">{{ t.back_home }}</a>
     </div>
 </body>
 </html>

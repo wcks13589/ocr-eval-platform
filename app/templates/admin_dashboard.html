@@ -1,11 +1,37 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理員控制面板 - OCR 評估平台</title>
+    <title>{{ t.admin_dashboard }} - {{ t.app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
+        .lang-switcher {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .lang-btn {
+            padding: 6px 12px;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: #4a5568;
+        }
+        .lang-btn:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+        .lang-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
         .admin-header {
             display: flex;
             justify-content: space-between;
@@ -116,15 +142,20 @@
 </head>
 <body>
     <div class="container">
+        <div class="lang-switcher">
+            <a href="/set_language/zh-TW" class="lang-btn {% if lang == 'zh-TW' %}active{% endif %}">中文</a>
+            <a href="/set_language/en" class="lang-btn {% if lang == 'en' %}active{% endif %}">English</a>
+        </div>
+
         <div class="admin-header">
-            <h1 class="admin-title">⚙️ 管理員控制面板</h1>
+            <h1 class="admin-title">{{ t.admin_dashboard }}</h1>
             <div class="admin-actions">
                 <button onclick="window.location.href='/'" class="action-btn btn-home">
-                    🏠 返回首頁
+                    {{ t.back_home }}
                 </button>
                 <form action="/admin/logout" method="post" style="display: inline;">
                     <button type="submit" class="action-btn btn-logout">
-                        🚪 登出
+                        {{ t.logout }}
                     </button>
                 </form>
             </div>
@@ -135,22 +166,22 @@
         <div class="stats">
             <div class="stats-content">
                 <div class="stat-item">
-                    總記錄數：<span class="stat-value" id="totalCount">{{ leaders|length }}</span>
+                    {{ t.total_records }}<span class="stat-value" id="totalCount">{{ leaders|length }}</span>
                 </div>
             </div>
         </div>
 
-        <h2 style="color: #667eea; margin-bottom: 20px;">📊 排行榜記錄管理</h2>
+        <h2 style="color: #667eea; margin-bottom: 20px;">{{ t.leaderboard_management }}</h2>
 
         {% if leaders %}
         <table id="leaderboardTable">
             <thead>
                 <tr>
-                    <th>🏅 名次</th>
-                    <th>👤 名稱</th>
-                    <th>📊 TEDS</th>
-                    <th>🔍 詳細資訊</th>
-                    <th>🗑️ 操作</th>
+                    <th>{{ t.rank }}</th>
+                    <th>{{ t.name }}</th>
+                    <th>{{ t.teds_score }}</th>
+                    <th>{{ t.details }}</th>
+                    <th>{{ t.operation }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -170,17 +201,17 @@
                     <td><strong>{{ user.name }}</strong></td>
                     <td><span class="metric-value">{{ "%.4f"|format(user.teds) }}</span></td>
                     <td>
-                        <a href="/details/{{ user.name }}" class="admin-detail-btn" title="查看詳細分數">
-                            📋 詳細
+                        <a href="/details/{{ user.name }}" class="admin-detail-btn" title="{{ t.view_details }}">
+                            {{ t.view_details }}
                         </a>
                     </td>
                     <td>
                         <button 
                             class="delete-btn" 
                             onclick="deleteEntry('{{ user.name }}')"
-                            title="刪除此記錄"
+                            title="{{ t.delete }}"
                         >
-                            🗑️ 刪除
+                            {{ t.delete }}
                         </button>
                     </td>
                 </tr>
@@ -188,20 +219,27 @@
             </tbody>
         </table>
         {% else %}
-            <p class="info-text">目前沒有任何記錄</p>
+            <p class="info-text">{{ t.no_records_short }}</p>
         {% endif %}
     </div>
 
     <script>
+        const translations = {
+            deleteConfirm: "{{ t.delete_confirm }}",
+            deleting: "{{ t.deleting }}",
+            deleteBtn: "{{ t.delete }}",
+            deleteFailed: "{{ t.delete_failed }}"
+        };
+        
         function deleteEntry(name) {
-            if (!confirm(`確定要刪除「${name}」的所有資料嗎？\n\n這將會刪除：\n- 排行榜記錄\n- 詳細評分資料\n- 上傳的檔案\n\n此操作無法復原！`)) {
+            if (!confirm(translations.deleteConfirm.replace('{name}', name))) {
                 return;
             }
 
             // 禁用刪除按鈕
             const deleteBtn = event.target;
             deleteBtn.disabled = true;
-            deleteBtn.textContent = '刪除中...';
+            deleteBtn.textContent = translations.deleting;
 
             fetch(`/api/admin/delete/${encodeURIComponent(name)}`, {
                 method: 'DELETE',
@@ -238,16 +276,20 @@
                         successMsg.style.display = 'none';
                     }, 3000);
                 } else {
-                    alert(`刪除失敗：${data.error}`);
+                    alert(translations.deleteFailed.replace('{error}', data.error));
                     deleteBtn.disabled = false;
-                    deleteBtn.textContent = '🗑️ 刪除';
+                    deleteBtn.textContent = translations.deleteBtn;
                 }
             })
             .catch(error => {
-                console.error('錯誤:', error);
+                console.error('Error:', error);
+                {% if lang == 'en' %}
+                alert('An error occurred while deleting. Please try again.');
+                {% else %}
                 alert('刪除時發生錯誤，請重試');
+                {% endif %}
                 deleteBtn.disabled = false;
-                deleteBtn.textContent = '🗑️ 刪除';
+                deleteBtn.textContent = translations.deleteBtn;
             });
         }
 
@@ -278,4 +320,3 @@
     </script>
 </body>
 </html>
-

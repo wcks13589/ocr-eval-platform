@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import os, json, shutil, asyncio, secrets
 from app.evaluation import evaluate, load_ground_truth
+from app.i18n import get_all_translations
 from concurrent.futures import ThreadPoolExecutor
 
 app = FastAPI(title="OCR Evaluation Platform with Leaderboard")
@@ -38,16 +39,24 @@ def startup_event():
             json.dump([], f, ensure_ascii=False, indent=2)
 
 
+def get_language(request: Request) -> str:
+    """從 cookie 中獲取語言設置，默認為英文"""
+    return request.cookies.get("lang", "en")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """首頁：上傳介面 + 排行榜"""
+    lang = get_language(request)
     # 讀取排行榜數據
     with open(LEADERBOARD_PATH, "r", encoding="utf-8") as f:
         leaders = json.load(f)
     return templates.TemplateResponse("index.html", {
         "request": request, 
         "error": None,
-        "leaders": leaders
+        "leaders": leaders,
+        "lang": lang,
+        "t": get_all_translations(lang)
     })
 
 
@@ -80,6 +89,8 @@ async def evaluate_file(
     file: UploadFile = File(...)
 ):
     """上傳檔案並顯示評估結果（用於不支援 WebSocket 的備用方案）"""
+    lang = get_language(request)
+    t = get_all_translations(lang)
     filename = f"{name}.json"
     save_path = os.path.join(UPLOAD_DIR, filename)
 
@@ -90,8 +101,10 @@ async def evaluate_file(
             leaders = json.load(f)
         return templates.TemplateResponse("index.html", {
             "request": request,
-            "error": f"名稱「{name}」已存在排行榜，請換一個名稱。",
-            "leaders": leaders
+            "error": t["name_exists"].format(name=name),
+            "leaders": leaders,
+            "lang": lang,
+            "t": t
         })
 
     # 儲存上傳的檔案
@@ -124,7 +137,9 @@ async def evaluate_file(
         return templates.TemplateResponse("index.html", {
             "request": request,
             "error": f"❌ {str(e)}\n\n請檢查您的檔案格式後重新上傳。",
-            "leaders": leaders
+            "leaders": leaders,
+            "lang": lang,
+            "t": t
         })
     except Exception as e:
         # 其他錯誤
@@ -137,7 +152,9 @@ async def evaluate_file(
         return templates.TemplateResponse("index.html", {
             "request": request,
             "error": f"❌ 評估過程中發生錯誤：{str(e)}\n\n請聯絡管理員或檢查檔案格式。",
-            "leaders": leaders
+            "leaders": leaders,
+            "lang": lang,
+            "t": t
         })
 
     # 更新排行榜（儲存所有指標）
@@ -158,31 +175,40 @@ async def evaluate_file(
         "error": None,
         "leaders": data,
         "highlight_name": name,  # 標記要高亮的名稱
-        "success_message": f"✅ 評估完成！{name} 的 TEDS 分數為 {result['TEDS']}"
+        "success_message": t["score_result"].format(name=name, score=result['TEDS']),
+        "lang": lang,
+        "t": t
     })
 
 
 @app.get("/leaderboard", response_class=HTMLResponse)
 async def leaderboard(request: Request):
     """顯示排行榜"""
+    lang = get_language(request)
     with open(LEADERBOARD_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
     return templates.TemplateResponse("leaderboard.html", {
         "request": request,
-        "leaders": data
+        "leaders": data,
+        "lang": lang,
+        "t": get_all_translations(lang)
     })
 
 
 @app.get("/details/{name}", response_class=HTMLResponse)
 async def get_details(request: Request, name: str):
     """顯示某個參賽者的詳細分數"""
+    lang = get_language(request)
+    t = get_all_translations(lang)
     detail_path = os.path.join(DETAILS_DIR, f"{name}.json")
     
     if not os.path.exists(detail_path):
         return templates.TemplateResponse("index.html", {
             "request": request,
-            "error": f"找不到「{name}」的詳細資料",
-            "leaders": []
+            "error": t["not_found"].format(name=name),
+            "leaders": [],
+            "lang": lang,
+            "t": t
         })
     
     with open(detail_path, "r", encoding="utf-8") as f:
@@ -190,7 +216,9 @@ async def get_details(request: Request, name: str):
     
     return templates.TemplateResponse("details.html", {
         "request": request,
-        "detail_data": detail_data
+        "detail_data": detail_data,
+        "lang": lang,
+        "t": t
     })
 
 
@@ -211,14 +239,19 @@ async def api_get_details(name: str):
 @app.get("/admin/login", response_class=HTMLResponse)
 async def admin_login_page(request: Request):
     """管理員登入頁面"""
+    lang = get_language(request)
     return templates.TemplateResponse("admin_login.html", {
-        "request": request
+        "request": request,
+        "lang": lang,
+        "t": get_all_translations(lang)
     })
 
 
 @app.post("/admin/login")
 async def admin_login(request: Request, password: str = Form(...)):
     """管理員登入驗證"""
+    lang = get_language(request)
+    t = get_all_translations(lang)
     if password == ADMIN_PASSWORD:
         # 生成 session token
         token = secrets.token_urlsafe(32)
@@ -230,7 +263,9 @@ async def admin_login(request: Request, password: str = Form(...)):
     else:
         return templates.TemplateResponse("admin_login.html", {
             "request": request,
-            "error": "密碼錯誤"
+            "error": t["password_error"],
+            "lang": lang,
+            "t": t
         })
 
 
@@ -241,13 +276,16 @@ async def admin_dashboard(request: Request, admin_token: str = Cookie(None)):
     if not admin_token or admin_token not in admin_sessions:
         return RedirectResponse(url="/admin/login")
     
+    lang = get_language(request)
     # 讀取排行榜數據
     with open(LEADERBOARD_PATH, "r", encoding="utf-8") as f:
         leaders = json.load(f)
     
     return templates.TemplateResponse("admin_dashboard.html", {
         "request": request,
-        "leaders": leaders
+        "leaders": leaders,
+        "lang": lang,
+        "t": get_all_translations(lang)
     })
 
 
@@ -259,6 +297,21 @@ async def admin_logout(admin_token: str = Cookie(None)):
     
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie(key="admin_token")
+    return response
+
+
+@app.get("/set_language/{lang}")
+async def set_language(lang: str, request: Request):
+    """設置語言並返回上一頁"""
+    # 驗證語言代碼
+    if lang not in ["zh-TW", "en"]:
+        lang = "zh-TW"
+    
+    # 獲取來源頁面
+    referer = request.headers.get("referer", "/")
+    
+    response = RedirectResponse(url=referer, status_code=303)
+    response.set_cookie(key="lang", value=lang, max_age=31536000)  # 1年
     return response
 
 

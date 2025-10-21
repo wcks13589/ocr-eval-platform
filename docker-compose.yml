@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  ocr-eval-platform:
+  ocr-eval-platform-beta:
     build: .
-    container_name: ocr-eval-platform
+    container_name: ocr-eval-platform-beta
     ports:
-      - "8080:8080"
+      - "8081:8080"
     volumes:
       # Mount data directory to persist uploads and leaderboard
       - ./data:/app/data

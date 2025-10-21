@@ -1,35 +1,68 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>詳細分數 - {{ detail_data.name }}</title>
+    <title>{{ t.detail_title }} - {{ detail_data.name }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .lang-switcher {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .lang-btn {
+            padding: 6px 12px;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: #4a5568;
+        }
+        .lang-btn:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+        .lang-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+    </style>
 </head>
 <body>
     <div class="container" style="max-width: 1200px;">
+        <div class="lang-switcher">
+            <a href="/set_language/zh-TW" class="lang-btn {% if lang == 'zh-TW' %}active{% endif %}">中文</a>
+            <a href="/set_language/en" class="lang-btn {% if lang == 'en' %}active{% endif %}">English</a>
+        </div>
+
         <div class="detail-header">
-            <h1>📊 詳細評估結果</h1>
+            <h1>{{ t.detail_title }}</h1>
             <div class="detail-summary">
                 <div class="summary-card">
-                    <span class="summary-label">👤 參賽者</span>
+                    <span class="summary-label">{{ t.participant }}</span>
                     <span class="summary-value">{{ detail_data.name }}</span>
                 </div>
                 <div class="summary-card">
-                    <span class="summary-label">📈 平均 TEDS</span>
+                    <span class="summary-label">{{ t.average_teds }}</span>
                     <span class="summary-value highlight-score">{{ "%.4f"|format(detail_data.teds) }}</span>
                 </div>
                 <div class="summary-card">
-                    <span class="summary-label">✅ 有效資料</span>
+                    <span class="summary-label">{{ t.valid_data }}</span>
                     <span class="summary-value">{{ detail_data.valid_count }} / {{ detail_data.total_count }}</span>
                 </div>
             </div>
         </div>
 
         <div class="detail-actions">
-            <a href="/" class="action-btn btn-back">⬅️ 返回首頁</a>
-            <button onclick="downloadCSV()" class="action-btn btn-download">📥 下載 CSV</button>
-            <button onclick="toggleFilter()" class="action-btn btn-filter" id="filterBtn">🔍 顯示篩選</button>
+            <a href="/" class="action-btn btn-back">{{ t.back }}</a>
+            <button onclick="downloadCSV()" class="action-btn btn-download">{{ t.download_csv }}</button>
+            <button onclick="toggleFilter()" class="action-btn btn-filter" id="filterBtn">{{ t.show_filter }}</button>
         </div>
 
         <!-- 篩選選項 -->
@@ -37,43 +70,43 @@
             <div class="filter-group">
                 <label>
                     <input type="checkbox" id="filterValid" checked onchange="applyFilter()"> 
-                    顯示正常資料
+                    {{ t.show_normal }}
                 </label>
                 <label>
                     <input type="checkbox" id="filterMissing" checked onchange="applyFilter()"> 
-                    顯示缺失資料
+                    {{ t.show_missing }}
                 </label>
                 <label>
                     <input type="checkbox" id="filterError" checked onchange="applyFilter()"> 
-                    顯示錯誤資料
+                    {{ t.show_error }}
                 </label>
             </div>
             <div class="filter-group">
-                <label>最低分數：</label>
+                <label>{{ t.min_score }}</label>
                 <input type="number" id="minScore" min="0" max="1" step="0.01" value="0" onchange="applyFilter()">
-                <label>最高分數：</label>
+                <label>{{ t.max_score }}</label>
                 <input type="number" id="maxScore" min="0" max="1" step="0.01" value="1" onchange="applyFilter()">
             </div>
         </div>
 
         <!-- 統計資訊 -->
         <div class="stats-panel">
-            <h3>📈 分數統計</h3>
+            <h3>{{ t.score_statistics }}</h3>
             <div class="stats-grid">
                 <div class="stat-item">
-                    <span class="stat-label">完美分數 (1.0)</span>
+                    <span class="stat-label">{{ t.perfect_score }}</span>
                     <span class="stat-value" id="statPerfect">-</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">高分 (≥0.8)</span>
+                    <span class="stat-label">{{ t.high_score }}</span>
                     <span class="stat-value" id="statHigh">-</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">中分 (0.5-0.8)</span>
+                    <span class="stat-label">{{ t.medium_score }}</span>
                     <span class="stat-value" id="statMedium">-</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">低分 (<0.5)</span>
+                    <span class="stat-label">{{ t.low_score }}</span>
                     <span class="stat-value" id="statLow">-</span>
                 </div>
             </div>
@@ -84,11 +117,11 @@
             <table id="detailTable">
                 <thead>
                     <tr>
-                        <th style="width: 10%;">序號</th>
-                        <th style="width: 30%;">表格 ID</th>
-                        <th style="width: 20%;">TEDS 分數</th>
-                        <th style="width: 20%;">狀態</th>
-                        <th style="width: 20%;">評級</th>
+                        <th style="width: 10%;">{{ t.serial_number }}</th>
+                        <th style="width: 30%;">{{ t.table_id }}</th>
+                        <th style="width: 20%;">{{ t.teds_score_col }}</th>
+                        <th style="width: 20%;">{{ t.status }}</th>
+                        <th style="width: 20%;">{{ t.rating }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -105,22 +138,22 @@
                         </td>
                         <td>
                             {% if item.status == 'valid' %}
-                                <span class="status-badge status-valid">✅ 正常</span>
+                                <span class="status-badge status-valid">{{ t.status_normal }}</span>
                             {% elif item.status == 'missing' %}
-                                <span class="status-badge status-missing">❌ 缺失</span>
+                                <span class="status-badge status-missing">{{ t.status_missing }}</span>
                             {% else %}
-                                <span class="status-badge status-error">⚠️ 錯誤</span>
+                                <span class="status-badge status-error">{{ t.status_error }}</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if item.score == 1.0 %}
-                                <span class="grade-badge grade-perfect">🌟 完美</span>
+                                <span class="grade-badge grade-perfect">{{ t.grade_perfect }}</span>
                             {% elif item.score >= 0.8 %}
-                                <span class="grade-badge grade-high">😊 優秀</span>
+                                <span class="grade-badge grade-high">{{ t.grade_excellent }}</span>
                             {% elif item.score >= 0.5 %}
-                                <span class="grade-badge grade-medium">😐 普通</span>
+                                <span class="grade-badge grade-medium">{{ t.grade_average }}</span>
                             {% else %}
-                                <span class="grade-badge grade-low">😞 待改進</span>
+                                <span class="grade-badge grade-low">{{ t.grade_improve }}</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -132,6 +165,13 @@
 
     <script>
         const detailData = {{ detail_data | tojson }};
+        const lang = "{{ lang }}";
+        const translations = {
+            showFilter: "{{ t.show_filter }}",
+            hideFilter: "{{ t.hide_filter }}",
+            csvFilename: "{{ t.csv_filename }}",
+            csvHeader: "{{ t.csv_header }}"
+        };
 
         // 計算統計資訊
         function calculateStats() {
@@ -153,10 +193,10 @@
             const filterBtn = document.getElementById('filterBtn');
             if (filterOptions.style.display === 'none') {
                 filterOptions.style.display = 'block';
-                filterBtn.textContent = '🔍 隱藏篩選';
+                filterBtn.textContent = translations.hideFilter;
             } else {
                 filterOptions.style.display = 'none';
-                filterBtn.textContent = '🔍 顯示篩選';
+                filterBtn.textContent = translations.showFilter;
             }
         }
 
@@ -188,7 +228,7 @@
 
         // 下載 CSV
         function downloadCSV() {
-            let csv = '序號,資料ID,TEDS分數,狀態\n';
+            let csv = translations.csvHeader;
             detailData.details.forEach((item, index) => {
                 csv += `${index + 1},"${item.id}",${item.score},"${item.status}"\n`;
             });
@@ -196,7 +236,7 @@
             const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `${detailData.name}_詳細分數.csv`;
+            link.download = translations.csvFilename.replace('{name}', detailData.name);
             link.click();
         }
 
@@ -207,7 +247,3 @@
     </script>
 </body>
 </html>
-
-
-
-

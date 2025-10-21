@@ -1,11 +1,39 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理員登入 - OCR 評估平台</title>
+    <title>{{ t.admin_login_title }} - {{ t.app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
+        .lang-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        .lang-btn {
+            padding: 6px 12px;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: #4a5568;
+        }
+        .lang-btn:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+        .lang-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
         .login-container {
             max-width: 400px;
             margin: 100px auto;
@@ -74,8 +102,13 @@
     </style>
 </head>
 <body>
+    <div class="lang-switcher">
+        <a href="/set_language/zh-TW" class="lang-btn {% if lang == 'zh-TW' %}active{% endif %}">中文</a>
+        <a href="/set_language/en" class="lang-btn {% if lang == 'en' %}active{% endif %}">English</a>
+    </div>
+
     <div class="login-container">
-        <h1 class="login-title">🔐 管理員登入</h1>
+        <h1 class="login-title">{{ t.admin_login_title }}</h1>
         
         {% if error %}
             <div class="error">{{ error }}</div>
@@ -86,17 +119,16 @@
                 type="password" 
                 name="password" 
                 class="form-input" 
-                placeholder="請輸入管理員密碼" 
+                placeholder="{{ t.password_placeholder }}" 
                 required 
                 autofocus
             >
-            <button type="submit" class="login-btn">登入</button>
+            <button type="submit" class="login-btn">{{ t.login }}</button>
         </form>
         
         <div class="back-link">
-            <a href="/">← 返回首頁</a>
+            <a href="/">← {{ t.back_home }}</a>
         </div>
     </div>
 </body>
 </html>
-
