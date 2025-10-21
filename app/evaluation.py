@@ -133,7 +133,9 @@ def evaluate(pred_path, progress_callback=None):
                 "status": f"error: {str(e)[:50]}"
             })
 
-    avg_score = total_score / valid_count if valid_count > 0 else 0.0
+    # 使用 ground_truth 的總筆數作為分母，而不是有效筆數
+    # 這樣缺失或錯誤的資料會以 0 分計入平均
+    avg_score = total_score / total_items if total_items > 0 else 0.0
     
     return {
         "TEDS": round(avg_score, 4),
