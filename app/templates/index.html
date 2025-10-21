@@ -134,13 +134,13 @@
 
     <script>
         const translations = {
-            uploading: "{{ t.uploading }}",
-            evaluating: "{{ t.evaluating }}",
-            evaluationComplete: "{{ t.evaluation_complete }}",
-            nameExists: "{{ t.name_exists }}",
-            fillAllFields: "{{ t.fill_all_fields }}",
-            connectionError: "{{ t.connection_error }}",
-            startEvaluation: "{{ t.start_evaluation }}"
+            uploading: {{ t.uploading | tojson }},
+            evaluating: {{ t.evaluating | tojson }},
+            evaluationComplete: {{ t.evaluation_complete | tojson }},
+            nameExists: {{ t.name_exists | tojson }},
+            fillAllFields: {{ t.fill_all_fields | tojson }},
+            connectionError: {{ t.connection_error | tojson }},
+            startEvaluation: {{ t.start_evaluation | tojson }}
         };
 
         // WebSocket 進度條邏輯

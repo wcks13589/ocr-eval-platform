@@ -5,7 +5,7 @@ services:
     build: .
     container_name: ocr-eval-platform-beta
     ports:
-      - "8081:8080"
+      - "8080:8080"
     volumes:
       # Mount data directory to persist uploads and leaderboard
       - ./data:/app/data

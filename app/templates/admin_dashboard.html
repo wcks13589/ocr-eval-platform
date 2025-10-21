@@ -225,10 +225,10 @@
 
     <script>
         const translations = {
-            deleteConfirm: "{{ t.delete_confirm }}",
-            deleting: "{{ t.deleting }}",
-            deleteBtn: "{{ t.delete }}",
-            deleteFailed: "{{ t.delete_failed }}"
+            deleteConfirm: {{ t.delete_confirm | tojson }},
+            deleting: {{ t.deleting | tojson }},
+            deleteBtn: {{ t.delete | tojson }},
+            deleteFailed: {{ t.delete_failed | tojson }}
         };
         
         function deleteEntry(name) {

@@ -165,12 +165,12 @@
 
     <script>
         const detailData = {{ detail_data | tojson }};
-        const lang = "{{ lang }}";
+        const lang = {{ lang | tojson }};
         const translations = {
-            showFilter: "{{ t.show_filter }}",
-            hideFilter: "{{ t.hide_filter }}",
-            csvFilename: "{{ t.csv_filename }}",
-            csvHeader: "{{ t.csv_header }}"
+            showFilter: {{ t.show_filter | tojson }},
+            hideFilter: {{ t.hide_filter | tojson }},
+            csvFilename: {{ t.csv_filename | tojson }},
+            csvHeader: {{ t.csv_header | tojson }}
         };
 
         // 計算統計資訊
