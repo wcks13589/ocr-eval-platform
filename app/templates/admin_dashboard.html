@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理員控制面板 - OCR 評估平台</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .admin-title {
+            color: #667eea;
+            font-size: 2em;
+            margin: 0;
+        }
+        .admin-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: transform 0.2s;
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn-home {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-logout {
+            background: #f56565;
+            color: white;
+        }
+        .delete-btn {
+            display: inline-block;
+            padding: 6px 16px;
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(245, 101, 101, 0.3);
+            text-decoration: none;
+            vertical-align: middle;
+        }
+        .delete-btn:hover {
+            background: #e53e3e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 101, 101, 0.5);
+        }
+        .delete-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .admin-detail-btn {
+            display: inline-block;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            vertical-align: middle;
+        }
+        .admin-detail-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+            color: white;
+        }
+        .stats {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .stats-content {
+            display: flex;
+            gap: 30px;
+            font-size: 1.1em;
+        }
+        .stat-item {
+            color: #4a5568;
+        }
+        .stat-value {
+            font-weight: bold;
+            color: #667eea;
+        }
+        .success-message {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="admin-header">
+            <h1 class="admin-title">⚙️ 管理員控制面板</h1>
+            <div class="admin-actions">
+                <button onclick="window.location.href='/'" class="action-btn btn-home">
+                    🏠 返回首頁
+                </button>
+                <form action="/admin/logout" method="post" style="display: inline;">
+                    <button type="submit" class="action-btn btn-logout">
+                        🚪 登出
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="successMessage" class="success-message"></div>
+
+        <div class="stats">
+            <div class="stats-content">
+                <div class="stat-item">
+                    總記錄數：<span class="stat-value" id="totalCount">{{ leaders|length }}</span>
+                </div>
+            </div>
+        </div>
+
+        <h2 style="color: #667eea; margin-bottom: 20px;">📊 排行榜記錄管理</h2>
+
+        {% if leaders %}
+        <table id="leaderboardTable">
+            <thead>
+                <tr>
+                    <th>🏅 名次</th>
+                    <th>👤 名稱</th>
+                    <th>📊 TEDS</th>
+                    <th>🔍 詳細資訊</th>
+                    <th>🗑️ 操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in leaders %}
+                <tr data-name="{{ user.name }}">
+                    <td>
+                        {% if loop.index == 1 %}
+                            <span class="badge badge-gold">🥇 1</span>
+                        {% elif loop.index == 2 %}
+                            <span class="badge badge-silver">🥈 2</span>
+                        {% elif loop.index == 3 %}
+                            <span class="badge badge-bronze">🥉 3</span>
+                        {% else %}
+                            {{ loop.index }}
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ user.name }}</strong></td>
+                    <td><span class="metric-value">{{ "%.4f"|format(user.teds) }}</span></td>
+                    <td>
+                        <a href="/details/{{ user.name }}" class="admin-detail-btn" title="查看詳細分數">
+                            📋 詳細
+                        </a>
+                    </td>
+                    <td>
+                        <button 
+                            class="delete-btn" 
+                            onclick="deleteEntry('{{ user.name }}')"
+                            title="刪除此記錄"
+                        >
+                            🗑️ 刪除
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p class="info-text">目前沒有任何記錄</p>
+        {% endif %}
+    </div>
+
+    <script>
+        function deleteEntry(name) {
+            if (!confirm(`確定要刪除「${name}」的所有資料嗎？\n\n這將會刪除：\n- 排行榜記錄\n- 詳細評分資料\n- 上傳的檔案\n\n此操作無法復原！`)) {
+                return;
+            }
+
+            // 禁用刪除按鈕
+            const deleteBtn = event.target;
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = '刪除中...';
+
+            fetch(`/api/admin/delete/${encodeURIComponent(name)}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 顯示成功訊息
+                    const successMsg = document.getElementById('successMessage');
+                    successMsg.textContent = `✅ ${data.message}`;
+                    successMsg.style.display = 'block';
+
+                    // 從表格中移除該行
+                    const row = document.querySelector(`tr[data-name="${name}"]`);
+                    if (row) {
+                        row.style.transition = 'opacity 0.3s';
+                        row.style.opacity = '0';
+                        setTimeout(() => {
+                            row.remove();
+                            updateRankings();
+                            updateStats();
+                            
+                            // 如果沒有記錄了，顯示提示訊息
+                            const tbody = document.querySelector('#leaderboardTable tbody');
+                            if (tbody && tbody.children.length === 0) {
+                                location.reload();
+                            }
+                        }, 300);
+                    }
+
+                    // 3秒後隱藏成功訊息
+                    setTimeout(() => {
+                        successMsg.style.display = 'none';
+                    }, 3000);
+                } else {
+                    alert(`刪除失敗：${data.error}`);
+                    deleteBtn.disabled = false;
+                    deleteBtn.textContent = '🗑️ 刪除';
+                }
+            })
+            .catch(error => {
+                console.error('錯誤:', error);
+                alert('刪除時發生錯誤，請重試');
+                deleteBtn.disabled = false;
+                deleteBtn.textContent = '🗑️ 刪除';
+            });
+        }
+
+        function updateRankings() {
+            // 更新排名顯示
+            const rows = document.querySelectorAll('#leaderboardTable tbody tr');
+            rows.forEach((row, index) => {
+                const rankCell = row.querySelector('td:first-child');
+                const rank = index + 1;
+                
+                if (rank === 1) {
+                    rankCell.innerHTML = '<span class="badge badge-gold">🥇 1</span>';
+                } else if (rank === 2) {
+                    rankCell.innerHTML = '<span class="badge badge-silver">🥈 2</span>';
+                } else if (rank === 3) {
+                    rankCell.innerHTML = '<span class="badge badge-bronze">🥉 3</span>';
+                } else {
+                    rankCell.textContent = rank;
+                }
+            });
+        }
+
+        function updateStats() {
+            // 更新統計數據
+            const totalCount = document.querySelectorAll('#leaderboardTable tbody tr').length;
+            document.getElementById('totalCount').textContent = totalCount;
+        }
+    </script>
+</body>
+</html>
+

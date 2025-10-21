@@ -1,12 +1,17 @@
-from fastapi import FastAPI, UploadFile, File, Form, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, UploadFile, File, Form, Request, WebSocket, WebSocketDisconnect, Cookie, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-import os, json, shutil, asyncio
+import os, json, shutil, asyncio, secrets
 from app.evaluation import evaluate, load_ground_truth
 from concurrent.futures import ThreadPoolExecutor
 
 app = FastAPI(title="OCR Evaluation Platform with Leaderboard")
+
+# 管理員密碼（建議使用環境變數）
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+# 存儲活躍的管理員 session tokens
+admin_sessions = set()
 
 # 掛載靜態文件
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -201,6 +206,101 @@ async def api_get_details(name: str):
         detail_data = json.load(f)
     
     return {"success": True, "data": detail_data}
+
+
+@app.get("/admin/login", response_class=HTMLResponse)
+async def admin_login_page(request: Request):
+    """管理員登入頁面"""
+    return templates.TemplateResponse("admin_login.html", {
+        "request": request
+    })
+
+
+@app.post("/admin/login")
+async def admin_login(request: Request, password: str = Form(...)):
+    """管理員登入驗證"""
+    if password == ADMIN_PASSWORD:
+        # 生成 session token
+        token = secrets.token_urlsafe(32)
+        admin_sessions.add(token)
+        
+        response = RedirectResponse(url="/admin/dashboard", status_code=303)
+        response.set_cookie(key="admin_token", value=token, httponly=True, max_age=3600)
+        return response
+    else:
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request,
+            "error": "密碼錯誤"
+        })
+
+
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request, admin_token: str = Cookie(None)):
+    """管理員控制面板"""
+    # 驗證 session
+    if not admin_token or admin_token not in admin_sessions:
+        return RedirectResponse(url="/admin/login")
+    
+    # 讀取排行榜數據
+    with open(LEADERBOARD_PATH, "r", encoding="utf-8") as f:
+        leaders = json.load(f)
+    
+    return templates.TemplateResponse("admin_dashboard.html", {
+        "request": request,
+        "leaders": leaders
+    })
+
+
+@app.post("/admin/logout")
+async def admin_logout(admin_token: str = Cookie(None)):
+    """管理員登出"""
+    if admin_token and admin_token in admin_sessions:
+        admin_sessions.remove(admin_token)
+    
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie(key="admin_token")
+    return response
+
+
+@app.delete("/api/admin/delete/{name}")
+async def delete_entry(name: str, admin_token: str = Cookie(None)):
+    """API: 刪除某個參賽者的所有資料（僅限管理員）"""
+    # 驗證管理員權限
+    if not admin_token or admin_token not in admin_sessions:
+        return {"success": False, "error": "未授權：需要管理員權限"}
+    
+    try:
+        # 1. 從排行榜中移除
+        with open(LEADERBOARD_PATH, "r+", encoding="utf-8") as f:
+            leaderboard_data = json.load(f)
+            original_length = len(leaderboard_data)
+            leaderboard_data = [entry for entry in leaderboard_data if entry["name"] != name]
+            
+            if len(leaderboard_data) == original_length:
+                return {"success": False, "error": f"找不到「{name}」的記錄"}
+            
+            f.seek(0)
+            json.dump(leaderboard_data, f, ensure_ascii=False, indent=2)
+            f.truncate()
+        
+        # 2. 刪除詳細資料檔案
+        detail_path = os.path.join(DETAILS_DIR, f"{name}.json")
+        if os.path.exists(detail_path):
+            os.remove(detail_path)
+        
+        # 3. 刪除上傳的檔案
+        upload_path = os.path.join(UPLOAD_DIR, f"{name}.json")
+        if os.path.exists(upload_path):
+            os.remove(upload_path)
+        
+        return {
+            "success": True,
+            "message": f"已成功刪除「{name}」的所有資料",
+            "leaderboard": leaderboard_data
+        }
+    
+    except Exception as e:
+        return {"success": False, "error": f"刪除時發生錯誤：{str(e)}"}
 
 
 @app.websocket("/ws/{session_id}")
