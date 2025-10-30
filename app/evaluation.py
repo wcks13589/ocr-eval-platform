@@ -116,7 +116,10 @@ def evaluate(pred_path, progress_callback=None):
             gt_html = normalize_to_html(gt_text)
             pred_html = normalize_to_html(pred_text)
             score = teds.evaluate(pred_html, gt_html)
-            
+
+            if score < 0:
+                score = 0.0
+
             details.append({
                 "id": key,
                 "score": round(score, 4),
